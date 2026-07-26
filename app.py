@@ -16,7 +16,7 @@ def get_exchange():
 exchange = get_exchange()
 
 # Your token is now fully active and passed directly to the AI brain
-HF_TOKEN = "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"
+ = st.secrets.get("", "")
 client = InferenceClient("meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN)
 
 # Add an auto-refresh toggle to keep pricing moving completely live
