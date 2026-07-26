@@ -11,11 +11,12 @@ st.set_page_config(layout="wide", page_title="Ultimate 1% Quant Terminal")
 # --- 1. CORE SETUP & LIVE REAL-TIME TRIGGER ---
 @st.cache_resource
 def get_exchange():
-    return ccxt.binance({'enableRateLimit': True})
+    # Switched to Coinbase to bypass US cloud geo-restrictions completely
+    return ccxt.coinbase({'enableRateLimit': True})
 
 exchange = get_exchange()
 
-# Fixed assignment and lookup for hidden server environments
+# Hidden environment server settings
 HF_TOKEN = st.secrets.get("HF_TOKEN", "")
 client = InferenceClient("meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN if HF_TOKEN else None)
 
@@ -81,13 +82,13 @@ st.sidebar.title("🚨 Confluence Strategy Scanner")
 
 # Pre-fetch BTC daily return for Relative Strength computations
 try:
-    btc_ohlcv = exchange.fetch_ohlcv("BTC/USDT", timeframe='1d', limit=2)
+    btc_ohlcv = exchange.fetch_ohlcv("BTC-USDT", timeframe='1d', limit=2)
     btc_ret = (btc_ohlcv[1][4] - btc_ohlcv[0][4]) / btc_ohlcv[0][4]
 except Exception as e:
     btc_ret = 0.0
 
-# Watchlist baseline (You can change or add any Binance coin here)
-WATCHLIST = ["BTC/USDT", "ETH/USDT", "SOL/USDT", "AVAX/USDT", "LINK/USDT", "NEAR/USDT", "SUI/USDT", "APT/USDT"]
+# Watchlist baseline adapted for standard Coinbase asset configurations
+WATCHLIST = ["BTC-USDT", "ETH-USDT", "SOL-USDT", "AVAX-USDT", "LINK-USDT", "NEAR-USDT"]
 
 for asset in WATCHLIST:
     try:
@@ -112,7 +113,8 @@ for asset in WATCHLIST:
 
 # --- 4. MAIN TERMINAL DASHBOARD PANEL ---
 st.title("⚡ Institutional Core Quant Hub")
-main_ticker = st.text_input("Enter ANY Asset Ticker listed on Binance (e.g., SOL/USDT, DOGE/USDT, RENDER/USDT):", value="BTC/USDT").upper()
+# Note the required Coinbase formatting placeholder text (using hyphen instead of slash)
+main_ticker = st.text_input("Enter ANY Asset Ticker listed on Coinbase (e.g., SOL-USDT, ETH-USDT, LINK-USDT):", value="BTC-USDT").upper()
 
 try:
     ticker_data = exchange.fetch_ticker(main_ticker)
@@ -179,7 +181,7 @@ try:
 
 except Exception as e:
     st.error(f"Error handling market data: {e}")
-    st.warning("Please enter a valid asset listed on Binance (Format example: SOL/USDT).")
+    st.warning("Ensure asset naming utilizes the formatting rules required by the exchange (Format example: SOL-USDT).")
 
 # Trigger execution for real-time auto-refresh if selected
 if auto_refresh:
