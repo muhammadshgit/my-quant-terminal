@@ -15,9 +15,9 @@ def get_exchange():
 
 exchange = get_exchange()
 
-# Your token is now fully active and passed directly to the AI brain
- = st.secrets.get("", "")
-client = InferenceClient("meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN)
+# Fixed assignment and lookup for hidden server environments
+HF_TOKEN = st.secrets.get("HF_TOKEN", "")
+client = InferenceClient("meta-llama/Meta-Llama-3-8B-Instruct", token=HF_TOKEN if HF_TOKEN else None)
 
 # Add an auto-refresh toggle to keep pricing moving completely live
 st.sidebar.title("🎮 Terminal Controls")
