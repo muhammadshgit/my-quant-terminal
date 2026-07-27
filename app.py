@@ -177,7 +177,7 @@ try:
                 {"role": "user", "content": user_query}
             ]
             response = client.chat_completion(messages, max_tokens=400)
-            st.write(response.choices.message.content)
+            st.write(response.choices[0].message.content)
 
 except Exception as e:
     st.error(f"Error handling market data: {e}")
