@@ -11,7 +11,6 @@ st.set_page_config(layout="wide", page_title="Ultimate 1% Quant Terminal")
 # --- 1. CORE SETUP & LIVE REAL-TIME TRIGGER ---
 @st.cache_resource
 def get_exchange():
-    # Switched to Coinbase to bypass US cloud geo-restrictions completely
     return ccxt.coinbase({'enableRateLimit': True})
 
 exchange = get_exchange()
@@ -83,11 +82,10 @@ st.sidebar.title("🚨 Confluence Strategy Scanner")
 # Pre-fetch BTC daily return for Relative Strength computations
 try:
     btc_ohlcv = exchange.fetch_ohlcv("BTC-USDT", timeframe='1d', limit=2)
-    btc_ret = (btc_ohlcv[1][4] - btc_ohlcv[0][4]) / btc_ohlcv[0][4]
+    btc_ret = (btc_ohlcv - btc_ohlcv) / btc_ohlcv
 except Exception as e:
     btc_ret = 0.0
 
-# Watchlist baseline adapted for standard Coinbase asset configurations
 WATCHLIST = ["BTC-USDT", "ETH-USDT", "SOL-USDT", "AVAX-USDT", "LINK-USDT", "NEAR-USDT"]
 
 for asset in WATCHLIST:
@@ -113,12 +111,13 @@ for asset in WATCHLIST:
 
 # --- 4. MAIN TERMINAL DASHBOARD PANEL ---
 st.title("⚡ Institutional Core Quant Hub")
-# Note the required Coinbase formatting placeholder text (using hyphen instead of slash)
-main_ticker = st.text_input("Enter ANY Asset Ticker listed on Coinbase (e.g., SOL-USDT, ETH-USDT, LINK-USDT):", value="BTC-USDT").upper()
+main_ticker = st.text_input("Enter ANY Asset Ticker listed on Coinbase (e.g., SOL-USDT, ETH-USDT):", value="BTC-USDT").upper()
 
 try:
     ticker_data = exchange.fetch_ticker(main_ticker)
     curr_price = ticker_data['last']
+    # Extract live 24H volume metrics directly from the exchange endpoint
+    live_volume = ticker_data.get('baseVolume', 0.0) if ticker_data.get('baseVolume') else ticker_data.get('volume', 0.0)
     
     ohlcv_m_d = exchange.fetch_ohlcv(main_ticker, timeframe='1d', limit=30)
     ohlcv_m_h = exchange.fetch_ohlcv(main_ticker, timeframe='1h', limit=50)
@@ -150,6 +149,7 @@ try:
         st.markdown(f"**Structural Floor (Support Zone):** `${metrics['support']:,.4f}`")
         st.markdown(f"**Structural Ceiling (Resistance Zone):** `${metrics['resistance']:,.4f}`")
         st.markdown(f"**Calculated Swing Risk Exposure:** `{risk_pct:.2f}%`")
+        st.markdown(f"**Live 24H Base Asset Volume:** `{live_volume:,.2f} Units`")
         
         if metrics['liquidity_sweep']:
             st.warning("⚠️ INSTITUTIONAL LIQUIDITY SWEEP DETECTED!")
@@ -160,9 +160,12 @@ try:
     st.divider()
     st.subheader("🧠 Advanced Macro Structural Advisor")
 
+    # Injected the exact volume metrics into the AI's context window
     market_context = (
         f"Live Analytical Dossier:\n"
         f"- Target Asset Ticker: {main_ticker}\n"
+        f"- Current Live Price: ${curr_price:,.4f}\n"
+        f"- Live 24H Asset Trading Volume: {live_volume:,.2f} units\n"
         f"- Relative Strength Momentum vs BTC: {metrics['relative_strength_pct']:.2f}%\n"
         f"- Volatility Range (ATR %): {metrics['atr_pct']:.2f}%\n"
         f"- Current Hourly RSI: {metrics['rsi']:.1f}\n"
@@ -173,7 +176,7 @@ try:
     if user_query:
         with st.spinner("Processing structural strategies..."):
             messages = [
-                {"role": "system", "content": f"You are an elite quantitative trading partner. Use this data context to advise: {market_context}"},
+                {"role": "system", "content": f"You are an elite quantitative trading partner. You MUST evaluate the real data numbers provided in the context below. Do not give generic examples. Focus purely on diagnosing the actual values.\n\nContext:\n{market_context}"},
                 {"role": "user", "content": user_query}
             ]
             response = client.chat_completion(messages, max_tokens=400)
