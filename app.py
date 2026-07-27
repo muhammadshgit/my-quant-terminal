@@ -18,7 +18,7 @@ exchange = get_exchange()
 
 # Hidden environment server settings
 HF_TOKEN = st.secrets.get("HF_TOKEN", "")
-client = InferenceClient("meta-llama/Meta-Llama-3.1-8B-Instruct", token=HF_TOKEN if HF_TOKEN else None)
+client = InferenceClient("Qwen/Qwen2.5-7B-Instruct", token=HF_TOKEN if HF_TOKEN else None)
 
 # Add an auto-refresh toggle to keep pricing moving completely live
 st.sidebar.title("🎮 Terminal Controls")
