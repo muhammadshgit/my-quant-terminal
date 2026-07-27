@@ -82,7 +82,7 @@ st.sidebar.title("🚨 Confluence Strategy Scanner")
 # Pre-fetch BTC daily return for Relative Strength computations
 try:
     btc_ohlcv = exchange.fetch_ohlcv("BTC-USDT", timeframe='1d', limit=2)
-    btc_ret = (btc_ohlcv - btc_ohlcv) / btc_ohlcv
+    btc_ret = (btc_ohlcv[1][4] - btc_ohlcv[0][4]) / btc_ohlcv[0][4]
 except Exception as e:
     btc_ret = 0.0
 
@@ -116,13 +116,14 @@ main_ticker = st.text_input("Enter ANY Asset Ticker listed on Coinbase (e.g., SO
 try:
     ticker_data = exchange.fetch_ticker(main_ticker)
     curr_price = ticker_data['last']
-    # Extract live 24H volume metrics directly from the exchange endpoint
-    live_volume = ticker_data.get('baseVolume', 0.0) if ticker_data.get('baseVolume') else ticker_data.get('volume', 0.0)
     
     ohlcv_m_d = exchange.fetch_ohlcv(main_ticker, timeframe='1d', limit=30)
     ohlcv_m_h = exchange.fetch_ohlcv(main_ticker, timeframe='1h', limit=50)
     df_m_d = pd.DataFrame(ohlcv_m_d, columns=['time', 'open', 'high', 'low', 'close', 'volume'])
     df_m_h = pd.DataFrame(ohlcv_m_h, columns=['time', 'open', 'high', 'low', 'close', 'volume'])
+    
+    # EXPLICIT FIX: Extract volume directly from the last row of the candlestick dataframe
+    live_volume = float(df_m_d['volume'].iloc[-1])
     
     metrics = calculate_advanced_metrics(df_m_h, df_m_d, btc_ret)
     risk_pct = ((curr_price - metrics['support']) / curr_price) * 100
@@ -149,7 +150,7 @@ try:
         st.markdown(f"**Structural Floor (Support Zone):** `${metrics['support']:,.4f}`")
         st.markdown(f"**Structural Ceiling (Resistance Zone):** `${metrics['resistance']:,.4f}`")
         st.markdown(f"**Calculated Swing Risk Exposure:** `{risk_pct:.2f}%`")
-        st.markdown(f"**Live 24H Base Asset Volume:** `{live_volume:,.2f} Units`")
+        st.markdown(f"**Live Rolling 24H Trading Volume:** `{live_volume:,.2f} Units`")
         
         if metrics['liquidity_sweep']:
             st.warning("⚠️ INSTITUTIONAL LIQUIDITY SWEEP DETECTED!")
@@ -160,12 +161,11 @@ try:
     st.divider()
     st.subheader("🧠 Advanced Macro Structural Advisor")
 
-    # Injected the exact volume metrics into the AI's context window
     market_context = (
         f"Live Analytical Dossier:\n"
         f"- Target Asset Ticker: {main_ticker}\n"
         f"- Current Live Price: ${curr_price:,.4f}\n"
-        f"- Live 24H Asset Trading Volume: {live_volume:,.2f} units\n"
+        f"- Live Rolling 24H Volume Matrix: {live_volume:,.2f} units\n"
         f"- Relative Strength Momentum vs BTC: {metrics['relative_strength_pct']:.2f}%\n"
         f"- Volatility Range (ATR %): {metrics['atr_pct']:.2f}%\n"
         f"- Current Hourly RSI: {metrics['rsi']:.1f}\n"
@@ -176,11 +176,11 @@ try:
     if user_query:
         with st.spinner("Processing structural strategies..."):
             messages = [
-                {"role": "system", "content": f"You are an elite quantitative trading partner. You MUST evaluate the real data numbers provided in the context below. Do not give generic examples. Focus purely on diagnosing the actual values.\n\nContext:\n{market_context}"},
+                {"role": "system", "content": f"You are an elite quantitative trading partner. You MUST evaluate the real data numbers provided in the context below. Focus your entire analysis on diagnosing the exact numbers given.\n\nContext:\n{market_context}"},
                 {"role": "user", "content": user_query}
             ]
             response = client.chat_completion(messages, max_tokens=400)
-            st.write(response.choices[0].message.content)
+            st.write(response.choices.message.content)
 
 except Exception as e:
     st.error(f"Error handling market data: {e}")
